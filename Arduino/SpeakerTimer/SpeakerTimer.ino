@@ -4,30 +4,46 @@
 
 #include <TimerOne.h>
 #include <avr/sleep.h>
+#include <serLCD.h>
 
+//typedef struct {
+//  uint8_t second;
+//  uint8_t minute;
+//}lcdTime_t;
 
+// LED pins
 //const byte ledPin = 13;
 const uint8_t ledGreen = 3;
 const uint8_t ledYellow = 4;
 const uint8_t ledRed = 5;
 
+// LCD pin
+const uint8_t lcdPin = 6;
+
+// button pin
 const uint8_t button = 2;
 
+// lcd
+serLCD lcd(lcdPin);
+
+// time couunter in second
 volatile uint32_t seconds = 0;
 
-// interrupts
+// ISRs
 void secondIsr();
-void buttonHandler();
+void buttonIsr();
+
+// calculate left time
+//lcdTime_t getTimeLeft(const uint32_t second);
 
 // LED control functions
 void ledsOff();
 void ledOn(uint8_t led);
-// flag
-//volatile byte isStop = LOW;
-//volatile byte rpmCalculated = LOW;
+void setLeds(const uint32_t second);
 
-// Loop counter to wait
-//volatile int timeCount = 0;
+// LCD control functions
+void lcdInit();
+void lcdPrintLeftTime(const uint32_t second);
 
 void setup() {
   // set pin3 in fast PWM mode (),
@@ -41,69 +57,64 @@ void setup() {
   digitalWrite(ledGreen, LOW);
   digitalWrite(ledYellow, LOW);
   digitalWrite(ledRed, LOW);
-//  TCCR1A = 0;
-//  TCCR1B = _BV(WGM12) | _BV(CS12);
-//  TIMSK1 = _BV(OCIE1A)
-//  OCR1A = 31250;
 
   Timer1.initialize(1000000);
   Timer1.attachInterrupt( secondIsr );
   
   interrupts();
-
-  
   Serial.begin(9600);
   delay(1000);
   Serial.println("xxx");
   cli();
-  attachInterrupt(digitalPinToInterrupt(button), buttonHandler, FALLING);
+  attachInterrupt(digitalPinToInterrupt(button), buttonIsr, FALLING);
   sei();
   interrupts();
-  
-  set_sleep_mode(SLEEP_MODE_IDLE);
-  cli();
-  sleep_bod_disable();
-  sei();
-  sleep_mode();
+
+//  lcdTime = getTimeLeft(seconds);
+//  lcdTime.second = 0;
+//  lcdTime.minute = 30;
+
+
+//  set_sleep_mode(SLEEP_MODE_IDLE);
+//  cli();
+//  sleep_bod_disable();
+//  sei();
+//  sleep_mode();
 }
 
 void loop() {
   delay(20);
-  sleep_mode();
+//  sleep_mode();
 }
 
+// calculate remaining time
+//lcdTime_t getTimeLeft(const uint32_t second) {
+//  lcdTime_t lcdTime;
+//  uint8_t tempSec = second%60;
+//  if (tempSec == 0){
+//    lcdTime.second = 0;
+//    lcdTime.minute = 30 - second / 60;
+//  }else {
+//    lcdTime.second = 60 - second%60;
+//    lcdTime.minute = 30 - (second + lcdTime.second)/60;
+//  }
+//  return lcdTime;
+//}
+
+// timer1 ISR
 void secondIsr()
 {
   Serial.println(seconds);
   noInterrupts();
   seconds++;
-  if (seconds <= 1080){
-    ledOn(ledGreen);
-  }
-  else if (seconds <= 1200){
-    if(seconds%2){
-      ledsOff();
-    }else{
-      ledOn(ledGreen);
-    }
-  }
-  else if (seconds <= 1680){
-    ledOn(ledYellow);
-  }
-  else if (seconds <= 1800){
-    if(seconds%2){
-      ledsOff();
-    }else{
-      ledOn(ledYellow);
-    }
-  }
-  else{
-    ledOn(ledRed);
-  }
+  setLeds(seconds);
+//  lcdTime = getTimeLeft(seconds);
+  lcdPrintLeftTime(seconds);
   interrupts();
 }
 
-void buttonHandler() 
+// no need to debounce
+void buttonIsr() 
 {
 //  Serial.println("button pressed");
 //  digitalWrite(ledPin, HIGH);
@@ -111,6 +122,7 @@ void buttonHandler()
   seconds = 0;
   Timer1.restart();
   interrupts();
+  
 }
 
 void ledsOff(){
@@ -141,5 +153,67 @@ void ledOn(uint8_t led){
       digitalWrite(ledYellow, LOW);
       digitalWrite(ledRed, LOW);
   }
+}
+
+void setLeds(const uint32_t second) {
+  if (second <= 1080){
+    ledOn(ledGreen);
+  }
+  else if (second <= 1200){
+    if(second%2){
+      ledsOff();
+    }else{
+      ledOn(ledGreen);
+    }
+  }
+  else if (second <= 1680){
+    ledOn(ledYellow);
+  }
+  else if (second <= 1800){
+    if(second%2){
+      ledsOff();
+    }else{
+      ledOn(ledYellow);
+    }
+  }
+  else{
+    ledOn(ledRed);
+  }
+}
+
+void lcdInit(){
+  lcd.setBrightness(30);
+  lcd.noCursor();
+  lcd.home();
+  lcd.print(" Speaker Timer  ");
+  lcd.setCursor(2,1);
+  lcd.print("Time Left: 30:00");
+}
+
+void lcdPrintLeftTime(const uint32_t second) {
+  // calcute remaining time
+  uint8_t tempSec = second%60;
+  uint8_t lcdSec;
+  uint8_t lcdMin;
+  lcd.setBrightness(30);
+  if (second > 1800) {
+    lcdSec = 0;
+    lcdMin = 0;
+    if(second%2){
+      lcd.setBrightness(1);
+    }else{
+      lcd.setBrightness(30);
+    }
+  }
+  else if (tempSec == 0){
+    lcdSec = 0;
+    lcdMin = 30 - second / 60;
+  }else {
+    lcdSec = 60 - tempSec;
+    lcdMin = 30 - (second + lcdSec)/60;
+  }
+  
+  // print time
+  
 }
 
