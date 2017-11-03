@@ -15,9 +15,7 @@
 Adafruit_7segment timerDisplay = Adafruit_7segment();
 
 // on and off every second.
-bool blinkColon = true;
-
-//uint16_t displayValue = hours*100 + minutes;
+volatile bool displayColon = true;
 
 // LED pins
 //const byte ledPin = 13;
@@ -46,7 +44,7 @@ void setLeds(const uint32_t second);
 
 // LCD control functions
 //void lcdInit();
-//void lcdPrintLeftTime(const uint32_t second);
+void segPrintLeftTime(const uint32_t second);
 
 void setup() {
   // set pin3 in fast PWM mode (),
@@ -74,8 +72,9 @@ void setup() {
   interrupts();
 
   // Setup the display.
-  clockDisplay.begin(DISPLAY_ADDRESS);
-
+  timerDisplay.begin(DISPLAY_ADDRESS);
+  
+  
 //  lcdTime = getTimeLeft(seconds);
 //  lcdTime.second = 0;
 //  lcdTime.minute = 30;
@@ -114,8 +113,7 @@ void secondIsr()
   noInterrupts();
   seconds++;
   setLeds(seconds);
-//  lcdTime = getTimeLeft(seconds);
-  lcdPrintLeftTime(seconds);
+  segPrintLeftTime(seconds);
   interrupts();
 }
 
@@ -187,39 +185,48 @@ void setLeds(const uint32_t second) {
   }
 }
 
-void lcdInit(){
-  lcd.setBrightness(30);
-  lcd.noCursor();
-  lcd.home();
-  lcd.print(" Speaker Timer  ");
-  lcd.setCursor(2,1);
-  lcd.print("Time Left: 30:00");
-}
+//void lcdInit(){
+//  lcd.setBrightness(30);
+//  lcd.noCursor();
+//  lcd.home();
+//  lcd.print(" Speaker Timer  ");
+//  lcd.setCursor(2,1);
+//  lcd.print("Time Left: 30:00");
+//}
 
-void lcdPrintLeftTime(const uint32_t second) {
+void segPrintLeftTime(const uint32_t second) {
   // calcute remaining time
   uint8_t tempSec = second%60;
-  uint8_t lcdSec;
-  uint8_t lcdMin;
-  lcd.setBrightness(30);
+  uint8_t segSec;
+  uint8_t segMin;
+//  if (second%2){
+//    displayColon = true;
+//  }else{
+//    displayColon = false;
+//  }
+  
+  timerDisplay.setBrightness(15);
   if (second > 1800) {
-    lcdSec = 0;
-    lcdMin = 0;
+    segSec = 0;
+    segMin = 0;
     if(second%2){
-      lcd.setBrightness(1);
+      timerDisplay.setBrightness(0);
     }else{
-      lcd.setBrightness(30);
+      timerDisplay.setBrightness(15);
     }
   }
   else if (tempSec == 0){
-    lcdSec = 0;
-    lcdMin = 30 - second / 60;
+    segSec = 0;
+    segMin = 30 - second / 60;
   }else {
-    lcdSec = 60 - tempSec;
-    lcdMin = 30 - (second + lcdSec)/60;
+    segSec = 60 - tempSec;
+    segMin = 30 - (second + segSec)/60;
   }
-  
+
   // print time
-  
+  uint16_t displayValue = segMin*100 + segSec;
+  timerDisplay.drawColon(displayColon);
+  timerDisplay.print(displayValue, DEC);
+  timerDisplay.writeDisplay();
 }
 
