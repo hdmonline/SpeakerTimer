@@ -8,6 +8,26 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_LEDBackpack.h>
 
+// time parameters
+const float timeGreenBlink = 18;
+const float timeYellow = 20;
+const float timeYellowBlink = 28;
+const float timeRed = 30;
+const uint16_t timer1Period = 50000;
+
+// LED & button pins
+const byte ledPin = 13;
+const uint8_t ledGreen = 3;
+const uint8_t ledYellow = 4;
+const uint8_t ledRed = 5;
+const uint8_t button = 2;
+
+// time in seconds
+const uint16_t timeGreenBlinkSec = round(timeGreenBlink * 60);
+const uint16_t timeYellowSec = round(timeYellow * 60);
+const uint16_t timeYellowBlinkSec = round(timeYellowBlink * 60);
+const uint16_t timeRedSec = round(timeRed * 60);
+
 // I2C address of the display.
 #define DISPLAY_ADDRESS   0x70
 
@@ -17,18 +37,11 @@ Adafruit_7segment timerDisplay = Adafruit_7segment();
 // on and off every second.
 volatile bool displayColon = true;
 
-// LED pins
-//const byte ledPin = 13;
-const uint8_t ledGreen = 3;
-const uint8_t ledYellow = 4;
-const uint8_t ledRed = 5;
-
-
-// button pin
-const uint8_t button = 2;
-
 // time couunter in second
 volatile uint32_t seconds = 0;
+
+// timer1 flag
+volatile bool fTimer1 = false;
 
 // ISRs
 void secondIsr();
@@ -42,30 +55,25 @@ void ledsOff();
 void ledOn(uint8_t led);
 void setLeds(const uint32_t second);
 
-// LCD control functions
-//void lcdInit();
+// 7-SEG control functions
+void getDisplayDigits(const uint16_t secs, const uint16_t mins);
 void segPrintLeftTime(const uint32_t second);
 
 void setup() {
-  // set pin3 in fast PWM mode (),
-  noInterrupts();
+  pinMode(ledPin, OUTPUT);
   pinMode(ledGreen, OUTPUT);
   pinMode(ledYellow, OUTPUT);
   pinMode(ledRed, OUTPUT);
   pinMode(button, INPUT_PULLUP);
 
-
+  digitalWrite(ledPin, LOW);
   digitalWrite(ledGreen, LOW);
   digitalWrite(ledYellow, LOW);
   digitalWrite(ledRed, LOW);
 
-  Timer1.initialize(1000000);
-  Timer1.attachInterrupt( secondIsr );
-  
-  interrupts();
   Serial.begin(9600);
   delay(1000);
-  Serial.println("xxx");
+
   cli();
   attachInterrupt(digitalPinToInterrupt(button), buttonIsr, FALLING);
   sei();
@@ -73,60 +81,50 @@ void setup() {
 
   // Setup the display.
   timerDisplay.begin(DISPLAY_ADDRESS);
-  
-  
-//  lcdTime = getTimeLeft(seconds);
-//  lcdTime.second = 0;
-//  lcdTime.minute = 30;
-
-
-//  set_sleep_mode(SLEEP_MODE_IDLE);
-//  cli();
-//  sleep_bod_disable();
-//  sei();
-//  sleep_mode();
+  getDisplayDigits(timeRed, 0);
+  timerDisplay.writeDisplay();
 }
 
 void loop() {
   delay(20);
+//  timerDisplay.drawColon(true);
+  timerDisplay.writeDisplay();
 //  sleep_mode();
 }
-
-// calculate remaining time
-//lcdTime_t getTimeLeft(const uint32_t second) {
-//  lcdTime_t lcdTime;
-//  uint8_t tempSec = second%60;
-//  if (tempSec == 0){
-//    lcdTime.second = 0;
-//    lcdTime.minute = 30 - second / 60;
-//  }else {
-//    lcdTime.second = 60 - second%60;
-//    lcdTime.minute = 30 - (second + lcdTime.second)/60;
-//  }
-//  return lcdTime;
-//}
 
 // timer1 ISR
 void secondIsr()
 {
-  Serial.println(seconds);
+//  Serial.println(seconds);
   noInterrupts();
-  seconds++;
   setLeds(seconds);
   segPrintLeftTime(seconds);
+  seconds++;
   interrupts();
 }
 
-// no need to debounce
 void buttonIsr() 
 {
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if (interrupt_time - last_interrupt_time > 200) {
+    seconds = 0;
+    ledOn(ledGreen);
+    if (fTimer1) {
+      Timer1.stop();
+      Timer1.restart();
+    }else {
+      Timer1.initialize(timer1Period);
+      Timer1.attachInterrupt(secondIsr);
+      Timer1.restart();
+      seconds = 0;
+      fTimer1 = true;
+    }
+  }
+  last_interrupt_time = interrupt_time;
 //  Serial.println("button pressed");
 //  digitalWrite(ledPin, HIGH);
-  noInterrupts();
-  seconds = 0;
-  Timer1.restart();
-  interrupts();
-  
 }
 
 void ledsOff(){
@@ -160,20 +158,20 @@ void ledOn(uint8_t led){
 }
 
 void setLeds(const uint32_t second) {
-  if (second <= 1080){
+  if (second <= timeGreenBlinkSec){
     ledOn(ledGreen);
   }
-  else if (second <= 1200){
+  else if (second <= timeYellowSec){
     if(second%2){
       ledsOff();
     }else{
       ledOn(ledGreen);
     }
   }
-  else if (second <= 1680){
+  else if (second <= timeYellowBlinkSec){
     ledOn(ledYellow);
   }
-  else if (second <= 1800){
+  else if (second <= timeRedSec){
     if(second%2){
       ledsOff();
     }else{
@@ -185,48 +183,43 @@ void setLeds(const uint32_t second) {
   }
 }
 
-//void lcdInit(){
-//  lcd.setBrightness(30);
-//  lcd.noCursor();
-//  lcd.home();
-//  lcd.print(" Speaker Timer  ");
-//  lcd.setCursor(2,1);
-//  lcd.print("Time Left: 30:00");
-//}
+void getDisplayDigits(const uint16_t mins, const uint16_t secs) {
+  timerDisplay.writeDigitNum(0, mins/10, false);
+  timerDisplay.writeDigitNum(1, mins%10, false);
+  timerDisplay.drawColon(true);
+  timerDisplay.writeDigitNum(3, secs/10, false);
+  timerDisplay.writeDigitNum(4, secs%10, false);
+}
 
 void segPrintLeftTime(const uint32_t second) {
   // calcute remaining time
-  uint8_t tempSec = second%60;
-  uint8_t segSec;
-  uint8_t segMin;
-//  if (second%2){
-//    displayColon = true;
-//  }else{
-//    displayColon = false;
-//  }
+  uint16_t tempSec = second%60;
+  uint16_t segSec;
+  uint16_t segMin;
+//  Serial.println(tempSec);
   
-  timerDisplay.setBrightness(15);
-  if (second > 1800) {
+  
+////  timerDisplay.setBrightness(15);
+  if (second > timeRedSec) {
     segSec = 0;
     segMin = 0;
-    if(second%2){
-      timerDisplay.setBrightness(0);
+    if(second%2 == 1){
+      timerDisplay.clear();
     }else{
-      timerDisplay.setBrightness(15);
+      getDisplayDigits(segMin,segSec);
     }
   }
-  else if (tempSec == 0){
-    segSec = 0;
-    segMin = 30 - second / 60;
-  }else {
-    segSec = 60 - tempSec;
-    segMin = 30 - (second + segSec)/60;
+  else {
+    if (tempSec == 0){
+      segSec = 0;
+      segMin = timeRed - second / 60;
+    } else {
+      segSec = 60 - tempSec;
+      segMin = timeRed - (second + segSec)/60;
+    }
+    getDisplayDigits(segMin,segSec);
   }
-
-  // print time
-  uint16_t displayValue = segMin*100 + segSec;
-  timerDisplay.drawColon(displayColon);
-  timerDisplay.print(displayValue, DEC);
-  timerDisplay.writeDisplay();
+  delay(10);
+  
 }
 
