@@ -1,5 +1,5 @@
 /* This program makes a timer to time the speaker's presentation by lighting up three LEDs in different color
- *  Start with green, after 20 min the yellow LED lights up and after 30 min the red one lights up.
+ *  Start with green, after 20 min the yellow LED lights up and after 30 min the red one lights up.dongmin  
 */
 
 #include <TimerOne.h>
@@ -13,7 +13,7 @@ const float timeGreenBlink = 18;
 const float timeYellow = 20;
 const float timeYellowBlink = 28;
 const float timeRed = 30;
-const uint16_t timer1Period = 50000;
+const uint32_t timer1Period = 1000000;
 
 // LED & button pins
 const byte ledPin = 13;
@@ -66,13 +66,13 @@ void setup() {
   pinMode(ledRed, OUTPUT);
   pinMode(button, INPUT_PULLUP);
 
-  digitalWrite(ledPin, LOW);
-  digitalWrite(ledGreen, LOW);
-  digitalWrite(ledYellow, LOW);
-  digitalWrite(ledRed, LOW);
+  digitalWrite(ledPin, HIGH);
+  digitalWrite(ledGreen, HIGH);
+  digitalWrite(ledYellow, HIGH);
+  digitalWrite(ledRed, HIGH);
 
-  Serial.begin(9600);
-  delay(1000);
+//  Serial.begin(9600);
+//  delay(1000);
 
   cli();
   attachInterrupt(digitalPinToInterrupt(button), buttonIsr, FALLING);
@@ -95,7 +95,6 @@ void loop() {
 // timer1 ISR
 void secondIsr()
 {
-//  Serial.println(seconds);
   noInterrupts();
   setLeds(seconds);
   segPrintLeftTime(seconds);
@@ -107,6 +106,7 @@ void buttonIsr()
 {
   static unsigned long last_interrupt_time = 0;
   unsigned long interrupt_time = millis();
+  
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
   if (interrupt_time - last_interrupt_time > 200) {
     seconds = 0;
@@ -123,37 +123,35 @@ void buttonIsr()
     }
   }
   last_interrupt_time = interrupt_time;
-//  Serial.println("button pressed");
-//  digitalWrite(ledPin, HIGH);
 }
 
 void ledsOff(){
-  digitalWrite(ledGreen, LOW);
-  digitalWrite(ledYellow, LOW);
-  digitalWrite(ledRed, LOW);
+  digitalWrite(ledGreen, HIGH);
+  digitalWrite(ledYellow, HIGH);
+  digitalWrite(ledRed, HIGH);
 }
 
 void ledOn(uint8_t led){
   switch(led){
     case ledGreen:
-      digitalWrite(ledGreen, HIGH);
-      digitalWrite(ledYellow, LOW);
-      digitalWrite(ledRed, LOW);
-      break;
-    case ledYellow:
       digitalWrite(ledGreen, LOW);
       digitalWrite(ledYellow, HIGH);
-      digitalWrite(ledRed, LOW);
+      digitalWrite(ledRed, HIGH);
       break;
-    case ledRed:
-      digitalWrite(ledGreen, LOW);
+    case ledYellow:
+      digitalWrite(ledGreen, HIGH);
       digitalWrite(ledYellow, LOW);
       digitalWrite(ledRed, HIGH);
       break;
-    default:
-      digitalWrite(ledGreen, LOW);
-      digitalWrite(ledYellow, LOW);
+    case ledRed:
+      digitalWrite(ledGreen, HIGH);
+      digitalWrite(ledYellow, HIGH);
       digitalWrite(ledRed, LOW);
+      break;
+    default:
+      digitalWrite(ledGreen, HIGH);
+      digitalWrite(ledYellow, HIGH);
+      digitalWrite(ledRed, HIGH);
   }
 }
 
@@ -196,10 +194,7 @@ void segPrintLeftTime(const uint32_t second) {
   uint16_t tempSec = second%60;
   uint16_t segSec;
   uint16_t segMin;
-//  Serial.println(tempSec);
   
-  
-////  timerDisplay.setBrightness(15);
   if (second > timeRedSec) {
     segSec = 0;
     segMin = 0;
