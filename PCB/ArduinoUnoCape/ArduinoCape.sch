@@ -1609,8 +1609,8 @@ part number 2062-2P from STA</description>
 <parts>
 <part name="U1" library="adafruit" library_urn="urn:adsk.eagle:library:420" deviceset="ARDUINOR3" device="-DIMENSION"/>
 <part name="LED" library="con-lstb" library_urn="urn:adsk.eagle:library:162" deviceset="MA03-1" device=""/>
-<part name="7-SEG-LED" library="Seeed-OPL-Connector" deviceset="GROVE-CONNECTOR-DIP(4P-2.0)" device="" value="4P-2.0"/>
-<part name="J1" library="SparkFun-Connectors" deviceset="CONN_02" device="JST-PTH-2"/>
+<part name="7-SEG-LED" library="Seeed-OPL-Connector" deviceset="GROVE-CONNECTOR-DIP(4P-2.0)" device=""/>
+<part name="BATERRY" library="SparkFun-Connectors" deviceset="CONN_02" device="JST-PTH-2"/>
 <part name="BUTTON" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X2" device=""/>
 </parts>
 <sheets>
@@ -1621,7 +1621,7 @@ part number 2062-2P from STA</description>
 <instance part="U1" gate="G$1" x="40.64" y="48.26" rot="R90"/>
 <instance part="LED" gate="G$1" x="96.52" y="48.26"/>
 <instance part="7-SEG-LED" gate="G$1" x="99.06" y="67.31" rot="R180"/>
-<instance part="J1" gate="G$1" x="96.52" y="25.4"/>
+<instance part="BATERRY" gate="G$1" x="96.52" y="25.4"/>
 <instance part="BUTTON" gate="G$1" x="96.52" y="83.82" rot="R180"/>
 </instances>
 <busses>
@@ -1711,7 +1711,7 @@ part number 2062-2P from STA</description>
 <label x="105.41" y="71.12" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="J1" gate="G$1" pin="1"/>
+<pinref part="BATERRY" gate="G$1" pin="1"/>
 <wire x1="104.14" y1="25.4" x2="109.22" y2="25.4" width="0.1524" layer="91"/>
 <label x="106.68" y="25.4" size="1.778" layer="95"/>
 </segment>
@@ -1747,7 +1747,7 @@ part number 2062-2P from STA</description>
 <label x="73.66" y="53.34" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="J1" gate="G$1" pin="2"/>
+<pinref part="BATERRY" gate="G$1" pin="2"/>
 <wire x1="104.14" y1="27.94" x2="109.22" y2="27.94" width="0.1524" layer="91"/>
 <label x="106.68" y="27.94" size="1.778" layer="95"/>
 </segment>

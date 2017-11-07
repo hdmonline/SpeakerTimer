@@ -1,5 +1,10 @@
-/* This program makes a timer to time the speaker's presentation by lighting up three LEDs in different color
- *  Start with green, after 20 min the yellow LED lights up and after 30 min the red one lights up.dongmin  
+/* This program makes a timer to time the speaker's presentation by lighting up three LEDs in different colors
+ *  and displaying the remaining time on the 7-segment LED display.
+ *  0 - 18 min      green
+ *  18 - 20 min     green bink
+ *  20 - 28 min     yellow
+ *  28 - 30 min     yeloow blink
+ *  30+ min         red
 */
 
 #include <TimerOne.h>
@@ -34,9 +39,6 @@ const uint16_t timeRedSec = round(timeRed * 60);
 // Create display and DS1307 objects.
 Adafruit_7segment timerDisplay = Adafruit_7segment();
 
-// on and off every second.
-volatile bool displayColon = true;
-
 // time couunter in second
 volatile uint32_t seconds = 0;
 
@@ -46,9 +48,6 @@ volatile bool fTimer1 = false;
 // ISRs
 void secondIsr();
 void buttonIsr();
-
-// calculate left time
-//lcdTime_t getTimeLeft(const uint32_t second);
 
 // LED control functions
 void ledsOff();
@@ -60,20 +59,21 @@ void getDisplayDigits(const uint16_t secs, const uint16_t mins);
 void segPrintLeftTime(const uint32_t second);
 
 void setup() {
+
+  // setting pin modes
   pinMode(ledPin, OUTPUT);
   pinMode(ledGreen, OUTPUT);
   pinMode(ledYellow, OUTPUT);
   pinMode(ledRed, OUTPUT);
   pinMode(button, INPUT_PULLUP);
 
+  // turn off LEDs
   digitalWrite(ledPin, HIGH);
   digitalWrite(ledGreen, HIGH);
   digitalWrite(ledYellow, HIGH);
   digitalWrite(ledRed, HIGH);
 
-//  Serial.begin(9600);
-//  delay(1000);
-
+  // attach button interrupt
   cli();
   attachInterrupt(digitalPinToInterrupt(button), buttonIsr, FALLING);
   sei();
@@ -87,9 +87,7 @@ void setup() {
 
 void loop() {
   delay(20);
-//  timerDisplay.drawColon(true);
   timerDisplay.writeDisplay();
-//  sleep_mode();
 }
 
 // timer1 ISR
@@ -102,13 +100,14 @@ void secondIsr()
   interrupts();
 }
 
+// debouncing button
 void buttonIsr() 
 {
-  static unsigned long last_interrupt_time = 0;
-  unsigned long interrupt_time = millis();
+  static uint32_t lastInterruptTime = 0;
+  uint32_t interruptTime = millis();
   
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - last_interrupt_time > 200) {
+  if (interruptTime - lastInterruptTime > 200) {
     seconds = 0;
     ledOn(ledGreen);
     if (fTimer1) {
@@ -122,15 +121,19 @@ void buttonIsr()
       fTimer1 = true;
     }
   }
-  last_interrupt_time = interrupt_time;
+  lastInterruptTime = interruptTime;
 }
 
+/*---------------------------------------------------------------
+ *--------LED functions------------------------------------------
+ *-------------------------------------------------------------*/
 void ledsOff(){
   digitalWrite(ledGreen, HIGH);
   digitalWrite(ledYellow, HIGH);
   digitalWrite(ledRed, HIGH);
 }
 
+// HIGH -> turn on, LOW -> turn off
 void ledOn(uint8_t led){
   switch(led){
     case ledGreen:
@@ -181,6 +184,9 @@ void setLeds(const uint32_t second) {
   }
 }
 
+/*---------------------------------------------------------------
+ *--------7 SEG LED functions------------------------------------
+ *-------------------------------------------------------------*/
 void getDisplayDigits(const uint16_t mins, const uint16_t secs) {
   timerDisplay.writeDigitNum(0, mins/10, false);
   timerDisplay.writeDigitNum(1, mins%10, false);
@@ -215,6 +221,5 @@ void segPrintLeftTime(const uint32_t second) {
     getDisplayDigits(segMin,segSec);
   }
   delay(10);
-  
 }
 
